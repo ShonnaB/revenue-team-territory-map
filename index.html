@@ -32,7 +32,7 @@
   .legend-swatch { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
   .legend-name { font-weight: 600; font-size: 13px; color: #F2E6D0; }
   .legend-count { font-size: 11px; color: #9C9484; margin-left: auto; }
-  .legend-note { font-size: 11px; color: #9C9484; font-style: italic; padding: 2px 0 2px 34px; margin-top: -4px; }
+  .legend-note { font-size: 10px; color: #9C9484; opacity: 0.6; font-weight: normal; font-style: italic; padding: 2px 0 2px 34px; margin-top: -4px; }
   .filter-tabs { display: flex; gap: 4px; margin-bottom: 12px; background: #2C2A25; border-radius: 8px; padding: 3px; }
   .filter-tab { flex: 1; text-align: center; padding: 6px 8px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #9C9484; border-radius: 6px; cursor: pointer; transition: all 0.15s ease; }
   .filter-tab:hover { color: #C4B89C; }
@@ -61,7 +61,7 @@
 </head>
 <body>
 <header>
-  <h1>LASSO Sales Territories Map</h1>
+  <h1>Sales Territory Map</h1>
   <p>Hover for team info &middot; Click for full details &middot; Filter by AE or SDR in the legend</p>
 </header>
 <div class="container">
@@ -73,7 +73,7 @@
     <div class="card">
       <h3>Team Legend</h3>
       <div class="filter-tabs" id="filter-tabs">
-        <div class="filter-tab active" data-role="ae">AEs</div>
+        <div class="filter-tab active" data-role="ae">AE Reps</div>
         <div class="filter-tab" data-role="sdr">SDRs</div>
       </div>
       <div id="legend"></div>
@@ -288,19 +288,20 @@ function buildLegend(role) {
   document.getElementById('legend').innerHTML = '';
   var container = d3.select('#legend');
   if (role === 'ae') {
-Object.keys(repColors).forEach(function(rep) {
-  var item = container.append('div')...
-  item.append('div').attr('class', 'legend-swatch')...
-  item.append('span').attr('class', 'legend-name').text(rep);
-  item.append('span').attr('class', 'legend-count').text(repStateCounts[rep] + ' states');
-  if (rep === 'Megan') {
-    container.append('div').attr('class','legend-note').text(<small style="opacity:0.5">'500+ emp nationwide & named accts'</small>);
-  }
-});
+    Object.keys(repColors).forEach(function(rep) {
+      var item = container.append('div').attr('class', 'legend-item').attr('data-name', rep).on('click', function() { toggleFilter('ae', rep); });
+      item.append('div').attr('class', 'legend-swatch').style('background', repColors[rep]);
+      item.append('span').attr('class', 'legend-name').text(rep);
+      item.append('span').attr('class', 'legend-count').text(repStateCounts[rep] + ' states');
+      if (rep === 'Megan') {
+        container.append('div').attr('class','legend-note').text('500+ emp nationwide & named accts');
+      }
+    });
     var caItem = container.append('div').attr('class', 'legend-item').style('margin-top','6px').style('border-top','1px solid #504A40').style('padding-top','8px');
     caItem.append('div').attr('class','legend-swatch').style('background',
       'repeating-linear-gradient(45deg, ' + repColors['Kat'] + ', ' + repColors['Kat'] + ' 3px, ' + repColors['Alexis'] + ' 3px, ' + repColors['Alexis'] + ' 6px)');
-    caItem.append('span').attr('class','legend-name').style('font-size','11px').text('CA <small style="opacity:0.5">(Shared: <50 Alexis; 50-500 Kat)</small>');
+    caItem.append('span').attr('class','legend-name').style('font-size','11px').text('CA');
+    container.append('div').attr('class','legend-note').text('Shared: <50 Alexis; 50-500 Kat');
   } else if (role === 'sdr') {
     sdrNames.forEach(function(name) {
       var count = sdrTerritories[name].length;
