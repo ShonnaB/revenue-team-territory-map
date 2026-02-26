@@ -61,7 +61,7 @@
 </head>
 <body>
 <header>
-  <h1>LASSSO Sales Territories Map</h1>
+  <h1>Sales Territory Map</h1>
   <p>Hover for team info &middot; Click for full details &middot; Filter by AE or SDR in the legend</p>
 </header>
 <div class="container">
@@ -73,7 +73,7 @@
     <div class="card">
       <h3>Team Legend</h3>
       <div class="filter-tabs" id="filter-tabs">
-        <div class="filter-tab active" data-role="ae">AEs</div>
+        <div class="filter-tab active" data-role="ae">AE Reps</div>
         <div class="filter-tab" data-role="sdr">SDRs</div>
       </div>
       <div id="legend"></div>
@@ -128,9 +128,9 @@ Object.entries(stateFIPS).forEach(function(e) { fipsToState[e[1]] = e[0]; });
 
 const territories = {
   'Megan':  ['Florida','New York','New Jersey','Louisiana'],
-  'Nick':   ['Massachusetts','Pennsylvania','Rhode Island','Connecticut','Washington','Oregon','Alaska','Arizona','Idaho','Illinois','Wisconsin','Indiana','Michigan','North Carolina','South Carolina'],
+  'Nick':   ['Massachusetts','Pennsylvania','Rhode Island','Connecticut','Washington','Oregon','Alaska','Arizona','Idaho','Illinois','Wisconsin','Indiana','North Carolina','South Carolina'],
   'Kat':    ['Georgia','Alabama','Mississippi','Tennessee','Nevada','Missouri','California'],
-  'Casey':  ['Texas','Kentucky','Oklahoma','Arkansas','West Virginia','District of Columbia','Maryland','Virginia','Delaware','Vermont','New Hampshire','Maine'],
+  'Casey':  ['Texas','Kentucky','Oklahoma','Arkansas','West Virginia','District of Columbia','Maryland','Virginia','Delaware','Vermont','New Hampshire','Maine','Michigan'],
   'Alexis': ['California','New Mexico','Hawaii','Colorado','Montana','Wyoming','Minnesota','Utah','Nebraska','Ohio','North Dakota','South Dakota','Kansas','Iowa']
 };
 
