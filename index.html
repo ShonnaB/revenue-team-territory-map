@@ -37,7 +37,7 @@
   .filter-tab { flex: 1; text-align: center; padding: 6px 8px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #9C9484; border-radius: 6px; cursor: pointer; transition: all 0.15s ease; }
   .filter-tab:hover { color: #C4B89C; }
   .filter-tab.active { background: #504A40; color: #F2E6D0; }
-  .detail-card { min-height: 180px; display: flex; flex-direction: column; }
+  .detail-card { min-height: 180px; display: flex; flex-direction: column; overflow-y: auto; }
   .detail-empty { flex: 1; display: flex; align-items: center; justify-content: center; color: #7A7266; font-size: 13px; text-align: center; line-height: 1.6; }
   .detail-content { display: none; }
   .detail-content.visible { display: block; }
@@ -49,6 +49,7 @@
   .team-member .name { font-size: 14px; font-weight: 700; color: #F2E6D0; }
   .team-member.ae { border-top: 3px solid var(--rep-color, #C4973B); }
   .team-member.sdr { border-top: 3px solid #8FAFC4; }
+  .team-member.csm { border-top: 3px solid #B8926A; }
   .detail-note { background: #504A40; border-radius: 8px; padding: 8px 12px; font-size: 12px; color: #C4B89C; line-height: 1.5; border-left: 3px solid #9C9484; margin-bottom: 12px; }
   .detail-section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #9C9484; margin-bottom: 8px; margin-top: 12px; }
   .detail-state-list { display: flex; flex-wrap: wrap; gap: 5px; }
@@ -61,8 +62,8 @@
 </head>
 <body>
 <header>
-  <h1>LASSO Sales Territory Map</h1>
-  <p>Hover for team info &middot; Click for full details &middot; Filter by AE or SDR in the legend</p>
+  <h1>Sales Territory Map</h1>
+  <p>Hover for team info &middot; Click for full details &middot; Filter by AE, SDR, or CSM in the legend</p>
 </header>
 <div class="container">
   <div class="map-area">
@@ -73,8 +74,9 @@
     <div class="card">
       <h3>Team Legend</h3>
       <div class="filter-tabs" id="filter-tabs">
-        <div class="filter-tab active" data-role="ae">AEs</div>
+        <div class="filter-tab active" data-role="ae">AE Reps</div>
         <div class="filter-tab" data-role="sdr">SDRs</div>
+        <div class="filter-tab" data-role="csm">CSMs</div>
       </div>
       <div id="legend"></div>
     </div>
@@ -179,6 +181,41 @@ const sdrPalette = {
   'Tatum':   '#7BA396'
 };
 
+const stateCSM = {
+  'Alabama':'Stephen','Alaska':'Stephanie','Arizona':'Stephen','Arkansas':'Stephen',
+  'California':'Stephanie','Colorado':'Stephen','Connecticut':'Kelly',
+  'District of Columbia':'Kelly','Delaware':'Kelly','Florida':'Britton',
+  'Georgia':'Britton','Hawaii':'Stephanie','Idaho':'Tori','Illinois':'Tori',
+  'Indiana':'Tori','Iowa':'Tori','Kansas':'Tori','Kentucky':'Tori',
+  'Louisiana':'Stephen','Maine':'Kelly','Maryland':'Kelly','Massachusetts':'Kelly',
+  'Michigan':'Tori','Minnesota':'Tori','Mississippi':'Stephen','Missouri':'Tori',
+  'Montana':'Tori','Nebraska':'Tori','Nevada':'Stephanie','New Hampshire':'Kelly',
+  'New Jersey':'Kelly','New Mexico':'Stephen','New York':'Kelly',
+  'North Carolina':'Britton','North Dakota':'Tori','Ohio':'Tori','Oklahoma':'Stephen',
+  'Oregon':'Stephanie','Pennsylvania':'Kelly','Rhode Island':'Kelly',
+  'South Carolina':'Britton','South Dakota':'Tori','Tennessee':'John',
+  'Texas':'Britton','Utah':'Stephen','Vermont':'Kelly','Virginia':'Kelly',
+  'Washington':'Stephanie','West Virginia':'Kelly','Wisconsin':'Tori','Wyoming':'Tori'
+};
+
+const csmNotes = { 'Britton': 'Relationship exceptions outside territory' };
+
+const csmTerritories = {};
+Object.entries(stateCSM).forEach(function(e) {
+  if (!csmTerritories[e[1]]) csmTerritories[e[1]] = [];
+  csmTerritories[e[1]].push(e[0]);
+});
+
+const csmNames = Object.keys(csmTerritories).sort();
+const csmPalette = {
+  'Britton':   '#C4973B',
+  'John':      '#B5654A',
+  'Kelly':     '#7B9DB7',
+  'Stephanie': '#8B7D55',
+  'Stephen':   '#6B8F71',
+  'Tori':      '#A68B7B'
+};
+
 var activeFilter = null;
 var currentTab = 'ae';
 
@@ -195,6 +232,14 @@ var pat = defs.append('pattern')
   .attr('patternTransform', 'rotate(45)');
 pat.append('rect').attr('width', 10).attr('height', 10).attr('fill', repColors['Alexis']);
 pat.append('rect').attr('x', 0).attr('y', 0).attr('width', 5).attr('height', 10).attr('fill', repColors['Kat']);
+
+var txPat = defs.append('pattern')
+  .attr('id', 'tx-csm-stripes')
+  .attr('patternUnits', 'userSpaceOnUse')
+  .attr('width', 10).attr('height', 10)
+  .attr('patternTransform', 'rotate(45)');
+txPat.append('rect').attr('width', 10).attr('height', 10).attr('fill', csmPalette['Britton']);
+txPat.append('rect').attr('x', 0).attr('y', 0).attr('width', 5).attr('height', 10).attr('fill', csmPalette['Stephen']);
 
 var us = US_ATLAS_DATA;
 var statesGeo = topojson.feature(us, us.objects.states).features;
@@ -225,6 +270,11 @@ function getStateFill(d) {
     var sdr = stateSDR[stateName];
     return sdr ? sdrPalette[sdr] : '#3A3630';
   }
+  if (currentTab === 'csm') {
+    if (stateName === 'Texas') return 'url(#tx-csm-stripes)';
+    var csm = stateCSM[stateName];
+    return csm ? csmPalette[csm] : '#3A3630';
+  }
   if (stateName === 'California') return 'url(#ca-stripes)';
   var rep = stateToRep[stateName];
   return rep ? repColors[rep] : '#3A3630';
@@ -240,6 +290,7 @@ function onMouseEnter(event, d) {
   if (!stateName) return;
   var rep = stateToRep[stateName];
   var sdr = stateSDR[stateName] || '\u2014';
+  var csm = stateCSM[stateName] || '\u2014';
   var isCa = stateName === 'California';
   var h = '<div class="tt-state">' + stateName + '</div>';
   if (isCa) {
@@ -248,6 +299,7 @@ function onMouseEnter(event, d) {
     h += '<div class="tt-row"><span class="tt-label">AE</span><span class="tt-value">' + (rep || '\u2014') + '</span></div>';
   }
   h += '<div class="tt-row"><span class="tt-label">SDR</span><span class="tt-value">' + sdr + '</span></div>';
+  h += '<div class="tt-row"><span class="tt-label">CSM</span><span class="tt-value">' + csm + '</span></div>';
   if (isCa) h += '<div class="tt-note">Mid-Market (50\u2013500 emp) = Kat \u00b7 SMB (&lt;50 emp) = Alexis</div>';
   if (rep === 'Megan') h += '<div class="tt-note">' + repNotes['Megan'] + '</div>';
   tooltip.html(h).classed('visible', true);
@@ -310,6 +362,22 @@ function buildLegend(role) {
       item.append('span').attr('class', 'legend-name').text(name);
       item.append('span').attr('class', 'legend-count').text(count + ' states');
     });
+  } else if (role === 'csm') {
+    csmNames.forEach(function(name) {
+      var count = csmTerritories[name].length;
+      var item = container.append('div').attr('class', 'legend-item').attr('data-name', name).on('click', function() { toggleFilter('csm', name); });
+      item.append('div').attr('class', 'legend-swatch').style('background', csmPalette[name]);
+      item.append('span').attr('class', 'legend-name').text(name);
+      item.append('span').attr('class', 'legend-count').text(count + ' states');
+      if (csmNotes[name]) {
+        container.append('div').attr('class','legend-note').text(csmNotes[name]);
+      }
+    });
+    var txItem = container.append('div').attr('class', 'legend-item').style('margin-top','6px').style('border-top','1px solid #504A40').style('padding-top','8px');
+    txItem.append('div').attr('class','legend-swatch').style('background',
+      'repeating-linear-gradient(45deg, ' + csmPalette['Stephen'] + ', ' + csmPalette['Stephen'] + ' 3px, ' + csmPalette['Britton'] + ' 3px, ' + csmPalette['Britton'] + ' 6px)');
+    txItem.append('span').attr('class','legend-name').style('font-size','11px').text('TX');
+    container.append('div').attr('class','legend-note').text('Shared: Stephen new accounts & Britton exceptions');
   }
 }
 
@@ -330,6 +398,9 @@ function toggleFilter(role, name) {
       if (stateName === 'California' && (name === 'Kat' || name === 'Alexis')) belongs = true;
     } else if (role === 'sdr') {
       belongs = stateSDR[stateName] === name;
+    } else if (role === 'csm') {
+      belongs = stateCSM[stateName] === name;
+      if (stateName === 'Texas' && (name === 'Stephen' || name === 'Britton')) belongs = true;
     }
     d3.select(this).classed('dimmed', !belongs);
   });
@@ -343,14 +414,20 @@ function showDetail(stateName) {
   emptyEl.style.display = 'none';
   contentEl.classList.add('visible');
   var isCa = stateName === 'California';
+  var isTx = stateName === 'Texas';
   var rep = isCa ? 'Shared' : (stateToRep[stateName] || 'Unassigned');
   var sdr = stateSDR[stateName] || '\u2014';
+  var csm = stateCSM[stateName] || '\u2014';
   var color = isCa ? '#D4A843' : (repColors[rep] || '#7A7266');
 
   var h = '<div class="detail-state-name"><span class="color-dot" style="background:' + color + '"></span>' + stateName + '</div>';
 
   if (isCa) {
     h += '<div class="detail-ca-note"><strong>Split AE Territory</strong><br><b>Kat</b> \u2014 Mid-Market (50\u2013500 employees)<br><b>Alexis</b> \u2014 SMB (under 50 employees)</div>';
+  }
+
+  if (isTx) {
+    h += '<div class="detail-ca-note"><strong>Shared CSM Territory</strong><br><b>Stephen</b> \u2014 New accounts<br><b>Britton</b> \u2014 Relationship exceptions</div>';
   }
 
   if (rep === 'Megan') {
@@ -361,10 +438,17 @@ function showDetail(stateName) {
   if (isCa) {
     h += '<div class="team-member ae" style="--rep-color:' + repColors['Kat'] + '"><div class="role">AE (Mid-Mkt)</div><div class="name">Kat</div></div>';
     h += '<div class="team-member ae" style="--rep-color:' + repColors['Alexis'] + '"><div class="role">AE (SMB)</div><div class="name">Alexis</div></div>';
-    h += '<div class="team-member sdr" style="grid-column: span 2"><div class="role">SDR</div><div class="name">' + sdr + '</div></div>';
+    h += '<div class="team-member sdr"><div class="role">SDR</div><div class="name">' + sdr + '</div></div>';
+    h += '<div class="team-member csm"><div class="role">CSM</div><div class="name">' + csm + '</div></div>';
+  } else if (isTx) {
+    h += '<div class="team-member ae" style="--rep-color:' + color + '"><div class="role">AE Rep</div><div class="name">' + rep + '</div></div>';
+    h += '<div class="team-member sdr"><div class="role">SDR</div><div class="name">' + sdr + '</div></div>';
+    h += '<div class="team-member csm"><div class="role">CSM (New)</div><div class="name">Stephen</div></div>';
+    h += '<div class="team-member csm"><div class="role">CSM (Exceptions)</div><div class="name">Britton</div></div>';
   } else {
     h += '<div class="team-member ae" style="--rep-color:' + color + '"><div class="role">AE Rep</div><div class="name">' + rep + '</div></div>';
     h += '<div class="team-member sdr"><div class="role">SDR</div><div class="name">' + sdr + '</div></div>';
+    h += '<div class="team-member csm"><div class="role">CSM</div><div class="name">' + csm + '</div></div>';
   }
   h += '</div>';
 
@@ -384,6 +468,12 @@ function showDetail(stateName) {
     var sdrStates = sdrTerritories[sdr] || [];
     h += '<div class="detail-section-title">' + sdr + ' SDR Territory (' + sdrStates.length + ')</div>';
     h += '<div class="detail-state-list">' + sdrStates.map(function(s) { return '<span class="detail-state-chip' + (s === stateName ? ' current' : '') + '">' + s + '</span>'; }).join('') + '</div>';
+  }
+
+  if (csm !== '\u2014') {
+    var csmStates = csmTerritories[csm] || [];
+    h += '<div class="detail-section-title">' + csm + ' CSM Territory (' + csmStates.length + ')</div>';
+    h += '<div class="detail-state-list">' + csmStates.map(function(s) { return '<span class="detail-state-chip' + (s === stateName ? ' current' : '') + '">' + s + '</span>'; }).join('') + '</div>';
   }
 
   contentEl.innerHTML = h;
