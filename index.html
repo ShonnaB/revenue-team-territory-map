@@ -79,7 +79,7 @@
 <div class="container">
   <div class="map-area">
     <div class="canada-map">
-      <svg id="canada-svg" viewBox="100 820 700 220" preserveAspectRatio="xMidYMin meet"></svg>
+      <svg id="canada-svg" viewBox="80 760 730 280" preserveAspectRatio="xMidYMin meet"></svg>
     </div>
     <svg id="map-svg" viewBox="0 0 960 620"></svg>
     <div class="tooltip" id="tooltip"></div>
@@ -153,6 +153,38 @@ var provinceSdr = {
   'on': 'Dave', 'qc': 'Dave', 'ns': 'Dave', 'nb': 'Dave',
   'nl': 'Dave', 'pe': 'Dave'
 };
+
+var provinceIdToName = {
+  'bc':'British Columbia','ab':'Alberta','sk':'Saskatchewan','mb':'Manitoba',
+  'on':'Ontario','qc':'Quebec','ns':'Nova Scotia','nb':'New Brunswick',
+  'nl':'Newfoundland & Labrador','pe':'Prince Edward Island'
+};
+
+// Build reverse lookups: rep -> list of province full names
+var repProvinces = {};
+Object.entries(provinceRep).forEach(function(e) {
+  var id = e[0], rep = e[1];
+  if (!rep || rep === 'ON-Shared') {
+    // ON-Shared -> credit to both Marra and Kyle
+    if (rep === 'ON-Shared') {
+      ['Marra','Kyle'].forEach(function(r) {
+        if (!repProvinces[r]) repProvinces[r] = [];
+        repProvinces[r].push(provinceIdToName[id]);
+      });
+    }
+    return;
+  }
+  if (!repProvinces[rep]) repProvinces[rep] = [];
+  repProvinces[rep].push(provinceIdToName[id]);
+});
+
+var sdrProvinces = {};
+Object.entries(provinceSdr).forEach(function(e) {
+  var id = e[0], sdr = e[1];
+  if (!sdr) return;
+  if (!sdrProvinces[sdr]) sdrProvinces[sdr] = [];
+  sdrProvinces[sdr].push(provinceIdToName[id]);
+});
 
 var provinceMarkets = {
   'bc': 'Vancouver',
@@ -516,20 +548,32 @@ function showDetail(stateName) {
 
   if (!isTx) {
     var repStates = territories[rep] || [];
-    h += '<div class="detail-section-title">' + rep + ' Territory (' + repStates.length + ')</div>';
-    h += '<div class="detail-state-list">' + repStates.map(function(s) { return '<span class="detail-state-chip' + (s === stateName ? ' current' : '') + '">' + s + '</span>'; }).join('') + '</div>';
+    var repProvs = repProvinces[rep] || [];
+    var totalCount = repStates.length + repProvs.length;
+    h += '<div class="detail-section-title">' + rep + ' Territory (' + totalCount + ')</div>';
+    h += '<div class="detail-state-list">' + repStates.map(function(s) { return '<span class="detail-state-chip' + (s === stateName ? ' current' : '') + '">' + s + '</span>'; }).join('');
+    if (repProvs.length) h += repProvs.map(function(p) { return '<span class="detail-state-chip province' + (p === stateName ? ' current' : '') + '">' + p + ' 🇨🇦</span>'; }).join('');
+    h += '</div>';
   } else {
     ['Tatum', 'Tiffany'].forEach(function(r) {
       var rStates = territories[r] || [];
-      h += '<div class="detail-section-title">' + r + ' Territory (' + rStates.length + ')</div>';
-      h += '<div class="detail-state-list">' + rStates.map(function(s) { return '<span class="detail-state-chip' + (s === 'Texas' ? ' current' : '') + '">' + s + '</span>'; }).join('') + '</div>';
+      var rProvs = repProvinces[r] || [];
+      var rTotal = rStates.length + rProvs.length;
+      h += '<div class="detail-section-title">' + r + ' Territory (' + rTotal + ')</div>';
+      h += '<div class="detail-state-list">' + rStates.map(function(s) { return '<span class="detail-state-chip' + (s === 'Texas' ? ' current' : '') + '">' + s + '</span>'; }).join('');
+      if (rProvs.length) h += rProvs.map(function(p) { return '<span class="detail-state-chip province">' + p + ' 🇨🇦</span>'; }).join('');
+      h += '</div>';
     });
   }
 
   if (sdr !== '—') {
     var sdrStates = sdrTerritories[sdr] || [];
-    h += '<div class="detail-section-title">' + sdr + ' SDR Territory (' + sdrStates.length + ')</div>';
-    h += '<div class="detail-state-list">' + sdrStates.map(function(s) { return '<span class="detail-state-chip' + (s === stateName ? ' current' : '') + '">' + s + '</span>'; }).join('') + '</div>';
+    var sdrProvs = sdrProvinces[sdr] || [];
+    var sdrTotal = sdrStates.length + sdrProvs.length;
+    h += '<div class="detail-section-title">' + sdr + ' SDR Territory (' + sdrTotal + ')</div>';
+    h += '<div class="detail-state-list">' + sdrStates.map(function(s) { return '<span class="detail-state-chip' + (s === stateName ? ' current' : '') + '">' + s + '</span>'; }).join('');
+    if (sdrProvs.length) h += sdrProvs.map(function(p) { return '<span class="detail-state-chip province' + (p === stateName ? ' current' : '') + '">' + p + ' 🇨🇦</span>'; }).join('');
+    h += '</div>';
   }
 
   if (csm !== '—' && !isTx) {
@@ -549,6 +593,70 @@ function showDetail(stateName) {
   contentEl.innerHTML = h;
 }
 
+function showProvinceDetail(provId) {
+  var provName = provinceIdToName[provId];
+  if (!provName) return;
+  var emptyEl = document.getElementById('detail-empty');
+  var contentEl = document.getElementById('detail-content');
+  emptyEl.style.display = 'none';
+  contentEl.classList.add('visible');
+
+  var ae = provinceRep[provId];
+  var sdr = provinceSdr[provId] || '—';
+  var market = provinceMarkets[provId] || '—';
+  var isON = provId === 'on';
+  var color = isON ? '#D4A843' : (ae ? repColors[ae] : '#7A7266');
+
+  var h = '<div class="detail-state-name"><span class="color-dot" style="background:' + color + '"></span>' + provName + ' 🇨🇦</div>';
+
+  if (isON) {
+    h += '<div class="detail-ca-note"><strong>Split AE Territory</strong><br><b>Marra</b> — Toronto<br><b>Kyle</b> — Ottawa</div>';
+  }
+
+  h += '<div class="team-grid">';
+  if (isON) {
+    h += '<div class="team-member ae" style="--rep-color:' + repColors['Marra'] + '"><div class="role">AE (Toronto)</div><div class="name">Marra</div></div>';
+    h += '<div class="team-member ae" style="--rep-color:' + repColors['Kyle'] + '"><div class="role">AE (Ottawa)</div><div class="name">Kyle</div></div>';
+  } else {
+    h += '<div class="team-member ae" style="--rep-color:' + color + '"><div class="role">AE Rep</div><div class="name">' + (ae || '—') + '</div></div>';
+  }
+  h += '<div class="team-member sdr"><div class="role">SDR</div><div class="name">' + sdr + '</div></div>';
+  h += '</div>';
+
+  // AE territory list
+  if (ae && !isON) {
+    var repStates = territories[ae] || [];
+    var repProvs = repProvinces[ae] || [];
+    var totalCount = repStates.length + repProvs.length;
+    h += '<div class="detail-section-title">' + ae + ' Territory (' + totalCount + ')</div>';
+    h += '<div class="detail-state-list">' + repStates.map(function(s) { return '<span class="detail-state-chip">' + s + '</span>'; }).join('');
+    if (repProvs.length) h += repProvs.map(function(p) { return '<span class="detail-state-chip province' + (p === provName ? ' current' : '') + '">' + p + ' 🇨🇦</span>'; }).join('');
+    h += '</div>';
+  } else if (isON) {
+    ['Marra', 'Kyle'].forEach(function(r) {
+      var rStates = territories[r] || [];
+      var rProvs = repProvinces[r] || [];
+      var rTotal = rStates.length + rProvs.length;
+      h += '<div class="detail-section-title">' + r + ' Territory (' + rTotal + ')</div>';
+      h += '<div class="detail-state-list">' + rStates.map(function(s) { return '<span class="detail-state-chip">' + s + '</span>'; }).join('');
+      if (rProvs.length) h += rProvs.map(function(p) { return '<span class="detail-state-chip province' + (p === provName ? ' current' : '') + '">' + p + ' 🇨🇦</span>'; }).join('');
+      h += '</div>';
+    });
+  }
+
+  // SDR territory list
+  if (sdr !== '—') {
+    var sdrStates = sdrTerritories[sdr] || [];
+    var sdrProvs = sdrProvinces[sdr] || [];
+    var sdrTotal = sdrStates.length + sdrProvs.length;
+    h += '<div class="detail-section-title">' + sdr + ' SDR Territory (' + sdrTotal + ')</div>';
+    h += '<div class="detail-state-list">' + sdrStates.map(function(s) { return '<span class="detail-state-chip">' + s + '</span>'; }).join('');
+    if (sdrProvs.length) h += sdrProvs.map(function(p) { return '<span class="detail-state-chip province' + (p === provName ? ' current' : '') + '">' + p + ' 🇨🇦</span>'; }).join('');
+    h += '</div>';
+  }
+
+  contentEl.innerHTML = h;
+}
 
 
 
@@ -607,7 +715,14 @@ canadaProvinces.forEach(function(prov) {
       tooltip.html(h).classed('visible', true);
     })
     .on('mousemove', onMouseMove)
-    .on('mouseleave', function() { tooltip.classed('visible', false); });
+    .on('mouseleave', function() { tooltip.classed('visible', false); })
+    .on('click', function() {
+      if (provinceRep[prov.id] || provinceSdr[prov.id]) {
+        canadaSvg.selectAll('.canada-province').classed('active', false);
+        d3.select(this).classed('active', true);
+        showProvinceDetail(prov.id);
+      }
+    });
 });
 
 // Canada label
